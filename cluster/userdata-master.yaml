@@ -1,6 +1,13 @@
 #cloud-config
 ssh_authorized_keys:
   - "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQCpzwYq1DHpE45uNin32k3KchWGHSPjGgpDrrl7d9fiP6ByIhhkeG/0sHqy9MC5r5OOsBwjlUlVZv1fZv42ei9tv94qeHL9vIMLeYGSeZLF+iqYGJAGTOMViptJb1K3OdBk6s/+nJCIA4agbKOh3E4f+EdxUMOA/rllx3dBtFv8LE2CAAFH0g5b5nGdHbOyLCI1qeG54q7zpKK/oJxWoHBSNSekVlQV0/i9DelFfOf2W6r+ugXD4h5msL9doHvpqnq0xcjJ+nc9u1FE9BwkjfgIZEmb9mDMaBUIqtEJ2TzwP3aQ+RPCmPqMGiC2/FmCnY1imhGjX13H00o1/j9Qvj/j9i7D6hNVi7/zom+yail+W6E/s1wWmkAI4yLq0VAt9M4F860m464UFUpkBw0IFzYvsyA/OoB7Az6R36ilHZ4EhCTvbP2AH5OYzE68w0+8E28Xb3cet7PSUO1qZ9DrfMzHxbiZduCgn+GgdJ5QUMiel2X8e8+7J72JBzjbvwkx5qFGRgnKI1TAhxO50LQfWerB1ND21DMYldiqTqkmyKtxsn9pZiK0QHl31Q01gUJVnHprMzj5fvMe4EH4cCB4qeddKjUQYo5javV6yL7WQB4igdQF3gLy1EC1DoC5y/3BGjMJVSDAS8rHk/o+ATpJRJvhH8fK8Es+4x68vHU0tIDoZw== cardno:000604137982"
+
+users:
+  # kubelet ssh user
+  - name: kube
+    ssh-authorized-keys:
+      - "ssh-rsa XXXX"
+
 coreos:
   update:
     reboot-strategy: "off"
@@ -56,6 +63,7 @@ coreos:
         --mount volume=var-log,target=/var/log"
         ExecStartPre=/usr/bin/mkdir -p /var/log/containers
         ExecStart=/usr/lib/coreos/kubelet-wrapper \
+        --address=127.0.0.1 \
         --cni-conf-dir=/etc/kubernetes/cni/net.d \
         --network-plugin=cni \
         --container-runtime=docker \
@@ -298,6 +306,8 @@ write_files:
           - --runtime-config=extensions/v1beta1/networkpolicies=true
           - --authentication-token-webhook-config-file=/etc/kubernetes/ssl/authnz.yaml
           - --cloud-provider=aws
+          - --ssh-keyfile=/etc/kubernetes/ssh/master-key
+          - --ssh-user=kube
           livenessProbe:
             httpGet:
               host: 127.0.0.1
@@ -315,6 +325,9 @@ write_files:
           volumeMounts:
           - mountPath: /etc/kubernetes/ssl
             name: ssl-certs-kubernetes
+            readOnly: true
+          - mountPath: /etc/kubernetes/ssh
+            name: ssh-keys-kubernetes
             readOnly: true
           - mountPath: /etc/ssl/certs
             name: ssl-certs-host
@@ -351,6 +364,9 @@ write_files:
         - hostPath:
             path: /etc/kubernetes/ssl
           name: ssl-certs-kubernetes
+        - hostPath:
+            path: /etc/kubernetes/ssh
+          name: ssh-keys-kubernetes
         - hostPath:
             path: /usr/share/ca-certificates
           name: ssl-certs-host
@@ -774,3 +790,10 @@ write_files:
             }
         }
 
+  - path: /etc/kubernetes/ssh/master-key
+    encoding: base64
+    content: XXXX
+
+  - path: /etc/kubernetes/ssh/master-key.pub
+    encoding: base64
+    content: XXX
