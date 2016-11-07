@@ -4,9 +4,9 @@ ssh_authorized_keys:
 coreos:
   update:
     reboot-strategy: "off"
-  flannel:
-    interface: $private_ipv4
-    etcd_endpoints: http://$private_ipv4:2379
+  # flannel:
+  #   interface: $private_ipv4
+  #   etcd_endpoints: http://$private_ipv4:2379
   etcd2:
     discovery-srv: {{ETCD_DISCOVERY_DOMAIN}}
     proxy: on
@@ -24,19 +24,17 @@ coreos:
         - name: 40-flannel.conf
           content: |
             [Unit]
-            Requires=flanneld.service
-            After=flanneld.service
             [Service]
             EnvironmentFile=/etc/kubernetes/cni/docker_opts_cni.env
 
-    - name: flanneld.service
-      drop-ins:
-        - name: 10-etcd.conf
-          content: |
-            [Service]
-            ExecStartPre=/usr/bin/etcdctl \
-            --endpoint=http://localhost:2379 set /coreos.com/network/config \
-            '{ "Network": "10.2.0.0/16", "Backend": {"Type": "vxlan"}}'
+    # - name: flanneld.service
+    #   drop-ins:
+    #     - name: 10-etcd.conf
+    #       content: |
+    #         [Service]
+    #         ExecStartPre=/usr/bin/etcdctl \
+    #         --endpoint=http://localhost:2379 set /coreos.com/network/config \
+    #         '{ "Network": "10.2.0.0/16", "Backend": {"Type": "vxlan"}}'
     - name: kubelet.service
       command: start
       runtime: true
@@ -355,6 +353,8 @@ write_files:
           - --root-ca-file=/etc/kubernetes/ssl/ca.pem
           - --cloud-provider=aws
           - --feature-gates=AllAlpha=true
+          - --allocate-node-cidrs
+          - --cluster-cidr=10.244.0.0/16
           resources:
             requests:
               cpu: 200m
@@ -942,12 +942,12 @@ write_files:
     encoding: gzip+base64
     content: H4sIAFCK/1cAA22Vt66raACEe57i9OiKnIotfjLGRJM7gsnBmMzT79lb77RTzKfRSPPnz694SdHMH/cFfmxXC4An/ehS/J/xBzI0TZoqjQdAF4AjgQO2yY98hjyJNsgRS0Vj1/hDq9Ori3vzsX64k7zDpRqTfE2tCIM8tOAeTz0XVJpgaXfNw+TUv0tpawlOc+j8oBmVlS90qTXheqDXoh7yy599gfua+8E9IIJf6Ruke5gPKnI1Nd066jNzrOrIhEHjYGxgdq2T9UUqLuVAG7cVGedy86eJh+zGyJC5pCQVt3e7KE0tgoh6vV8XnpQIhr8TLdX0FnY6qb4/DzFuFvbTsbX4uSVODCLrYjoSWo1jRFR4pHBLwpFgD94pV65N6OtfjSiQ/EFVkpbYjcDuyjO7NcbYEZruY9MPZR0uA8jI6ERn9WAIHpG3ouBZVMxWzULHov4eK8dcWEJ2aCJwAA+m37KlpV6NPYiGYRREf4TolBxMp3tWV6R8g2xUp/cdwOr50UXj2ojqfIWenJ1rbXw57+bvXEpgE/TlQK/fBybvUNdsyjPvX6e3quLrI02Pc+fMPMopMU532di4omSXbuNvg7x0vjs9Hx5RjbTdphNPxofSWUaFzZ7q7cbeNSXDKOcMFYnnsAO+obMuH7RZuffBACVOQF1wgd3NV/q131dqw54E1ZWt25WO+xrqishvyEwKaSvh8zjfikerMfzGnpilDs5pLcGr0GvLXr6sYw5ncCOeDzkIL/Tdq5Xv3s62GF6uzRj8oUc6W9z4OMmde3z2w3bbfeEcqudGs0Xb+BeEEkYtWgqRvUP3kyRUsQTovAtPdsbTuZikCkw1x0+H/1SDYwdNYziuvBDnJw38DsjG14ueC/OG6ElvMv92tSTv3LhvcGnjYskQc+AzRapEeHiUvEuLeZhzAnZyekhnmcuF4EEnW4miUIWXs4tGcxtXRbei+Mw2umHGLXbm8TCa1LF2emipDVkqPAreqTKY1HQtf4mxSXpBtC1bz1AzX+VhEUa40ffcbENHTPn56QFj9h1L3nfkcsxZkTXcEWc0Pstj5RqlN8KugB5MjFZksG09/YKv9EOoGa44Pq5pR2y11arbi+9rk7GWbi1+0b3Gu62vhm4iymSgiQiKK6JgomBBQaLc1PLe4rjJRAR8pvHo8/cQSSEjsOgvMsirQWJvYDV3WczwNOJnuQEoKM7Py8GTa71j+JWyii0u31W9C2ealksxeEojjJLZ0OzdTHfSDPXYw2gcC8dqmjasQi2P5C7i2jXCnduNTw/2ztOcyOTooOaaDdybeU3t8TscqSNYv0GyIU8PUSRrfwAPFkADnJcqfYu+VTHfVunW5lYNR+crmSK8ZO7wOZeZhDdHNEIkD54RZ42CM2Wz14wZbddDyCS+MHttPQPWCN7PpG6u9DmsdgqjBHQnKPEqD3PEca16X5bFXmLrTM9dW5eZRb7JDbVGK8aoMqwCotbhjciEUWkADpaP+uWxkKrSLmLp0X0X6qTpY7Qu/lkMdd2gwtMZZh/qDvkDJgXkR1zcczFUyI1gVnZUabxhITIQxfuJi9RT/8i+UirMJfa37gvfUaHyy11OiMxFxkOxq8W3dLb5Gl74BkXPmewI2PvdZzpSPhZWQ1q14Ji/7UpH22Ele4Modcq6HqTo4pp+2qGVt41NtU+2VHt/AN98nJLywHqn9erCFh0KnrOwKgLEIP+B/l6KZIr/fzX/AqgprOSLBgAA
 
-  - path: /etc/kubernetes/cni/net.d/10-flannel.conf
-    content: |
-        {
-            "name": "podnet",
-            "type": "flannel",
-            "delegate": {
-                "isDefaultGateway": true
-            }
-        }
+  # - path: /etc/kubernetes/cni/net.d/10-flannel.conf
+  #   content: |
+  #       {
+  #           "name": "podnet",
+  #           "type": "flannel",
+  #           "delegate": {
+  #               "isDefaultGateway": true
+  #           }
+  #       }

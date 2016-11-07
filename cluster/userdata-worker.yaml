@@ -4,9 +4,9 @@ ssh_authorized_keys:
 coreos:
   update:
     reboot-strategy: "off"
-  flannel:
-    interface: $private_ipv4
-    etcd_endpoints: http://$private_ipv4:2379
+  # flannel:
+  #   interface: $private_ipv4
+  #   etcd_endpoints: http://$private_ipv4:2379
   etcd2:
     discovery-srv: {{ETCD_DISCOVERY_DOMAIN}}
     proxy: on
@@ -24,8 +24,6 @@ coreos:
         - name: 40-flannel.conf
           content: |
             [Unit]
-            Requires=flanneld.service
-            After=flanneld.service
             [Service]
             EnvironmentFile=/etc/kubernetes/cni/docker_opts_cni.env
 
@@ -188,12 +186,12 @@ write_files:
           name: kubelet-context
         current-context: kubelet-context
 
-  - path: /etc/kubernetes/cni/net.d/10-flannel.conf
-    content: |
-        {
-            "name": "podnet",
-            "type": "flannel",
-            "delegate": {
-                "isDefaultGateway": true
-            }
-        }
+  # - path: /etc/kubernetes/cni/net.d/10-flannel.conf
+  #   content: |
+  #       {
+  #           "name": "podnet",
+  #           "type": "flannel",
+  #           "delegate": {
+  #               "isDefaultGateway": true
+  #           }
+  #       }
