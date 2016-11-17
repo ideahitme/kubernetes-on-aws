@@ -86,16 +86,16 @@ coreos:
         [Install]
         RequiredBy=kubelet.service
 
-    - name: install-microscope.service
-      command: start
-      runtime: true
-      content: |
-        [Unit]
-        Requires=docker.service
-        After=docker.service
-        [Service]
-        Type=oneshot
-        ExecStart=/usr/bin/docker pull registry.opensource.zalan.do/teapot/microscope:v0.0.2
+    # - name: install-microscope.service
+    #   command: start
+    #   runtime: true
+    #   content: |
+    #     [Unit]
+    #     Requires=docker.service
+    #     After=docker.service
+    #     [Service]
+    #     Type=oneshot
+    #     ExecStart=/usr/bin/docker pull registry.opensource.zalan.do/teapot/microscope:v0.0.2
 
 write_files:
   - path: /etc/kubernetes/cni/docker_opts_cni.env
