@@ -169,6 +169,7 @@ Resources:
           Version: '2012-10-17'
         PolicyName: root
     Type: AWS::IAM::Role
+    DependsOn: WorkerIAMRole
   MateIAMRole:
     Properties:
       RoleName: "{{SenzaInfo.StackName}}-{{SenzaInfo.StackVersion}}-app-mate"
@@ -197,6 +198,7 @@ Resources:
           Version: '2012-10-17'
         PolicyName: root
     Type: AWS::IAM::Role
+    DependsOn: WorkerIAMRole
   SecretaryIAMRole:
     Properties:
       RoleName: "{{SenzaInfo.StackName}}-{{SenzaInfo.StackVersion}}-app-secretary"
@@ -227,6 +229,7 @@ Resources:
             Effect: Allow
         PolicyName: AllowMintRead
     Type: AWS::IAM::Role
+    DependsOn: WorkerIAMRole
   MasterSecurityGroup:
     Properties:
       GroupDescription: {Ref: 'AWS::StackName'}
