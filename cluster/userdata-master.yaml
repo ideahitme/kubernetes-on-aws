@@ -4,9 +4,6 @@ ssh_authorized_keys:
 coreos:
   update:
     reboot-strategy: "off"
-  flannel:
-    interface: $private_ipv4
-    etcd_endpoints: http://$private_ipv4:2379
   etcd2:
     discovery-srv: {{ETCD_DISCOVERY_DOMAIN}}
     proxy: on
@@ -23,20 +20,9 @@ coreos:
       drop-ins:
         - name: 40-flannel.conf
           content: |
-            [Unit]
-            Requires=flanneld.service
-            After=flanneld.service
             [Service]
             EnvironmentFile=/etc/kubernetes/cni/docker_opts_cni.env
 
-    - name: flanneld.service
-      drop-ins:
-        - name: 10-etcd.conf
-          content: |
-            [Service]
-            ExecStartPre=/usr/bin/etcdctl \
-            --endpoint=http://localhost:2379 set /coreos.com/network/config \
-            '{ "Network": "10.2.0.0/16", "Backend": {"Type": "vxlan"}}'
     - name: kubelet.service
       command: start
       runtime: true
@@ -368,6 +354,8 @@ write_files:
           - --root-ca-file=/etc/kubernetes/ssl/ca.pem
           - --cloud-provider=aws
           - --feature-gates=AllAlpha=true
+          - --allocate-node-cidrs=true
+          - --cluster-cidr=10.2.0.0/16
           resources:
             requests:
               cpu: 200m
@@ -968,6 +956,76 @@ write_files:
                 path: /var/lib/docker/containers
             - name: jobfiles
               emptyDir: {}
+
+  - path: /srv/kubernetes/manifests/daemonsets/flannel.yaml
+    content: |
+      apiVersion: extensions/v1beta1
+      kind: DaemonSet
+      metadata:
+        name: kube-flannel
+        namespace: kube-system
+        labels:
+          tier: node
+          app: flannel
+      spec:
+        template:
+          metadata:
+            labels:
+              tier: node
+              app: flannel
+            annotations:
+              scheduler.alpha.kubernetes.io/critical-pod: ''
+              scheduler.alpha.kubernetes.io/tolerations: '[{"key":"CriticalAddonsOnly", "operator":"Exists"}]'
+          spec:
+            hostNetwork: true
+            nodeSelector:
+              beta.kubernetes.io/arch: amd64
+            containers:
+            - name: kube-flannel
+              image: quay.io/coreos/flannel-git:v0.6.1-28-g5dde68d-amd64
+              command: [ "/opt/bin/flanneld", "--ip-masq", "--kube-subnet-mgr" ]
+              securityContext:
+                privileged: true
+              env:
+              - name: POD_NAME
+                valueFrom:
+                  fieldRef:
+                    fieldPath: metadata.name
+              - name: POD_NAMESPACE
+                valueFrom:
+                  fieldRef:
+                    fieldPath: metadata.namespace
+              volumeMounts:
+              - name: run
+                mountPath: /run
+              - name: flannel-cfg
+                mountPath: /etc/kube-flannel/
+            volumes:
+              - name: run
+                hostPath:
+                  path: /run
+              - name: flannel-cfg
+                configMap:
+                  name: kube-flannel-cfg
+
+  - path: /srv/kubernetes/manifests/configmaps/flannel-cfg.yaml
+    content: |
+      kind: ConfigMap
+      apiVersion: v1
+      metadata:
+        name: kube-flannel-cfg
+        namespace: kube-system
+        labels:
+          tier: node
+          app: flannel
+      data:
+        net-conf.json: |
+          {
+            "Network": "10.2.0.0/16",
+            "Backend": {
+              "Type": "vxlan"
+            }
+          }
 
   - path: /etc/kubernetes/nginx/nginx.conf
     content: |
